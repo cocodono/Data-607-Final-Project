@@ -1,0 +1,30 @@
+---
+title: "Data 607 Final Project"
+author: "Coco Donovan"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Necessary Packages
+
+```{r}
+library(httr)
+library(jsonlite)
+library(dplyr)
+```
+
+### Police Incident Data: 2003 - 2018
+
+```{r}
+
+```
+
+### Police Incident Data: 2018 - Current
+
+```{r}
+
+```
