@@ -12,19 +12,43 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Necessary Packages
 
 ```{r}
-library(httr)
-library(jsonlite)
+library(ggplot2)
 library(dplyr)
+library(readr)
 ```
 
 ### Police Incident Data: 2003 - 2018
 
 ```{r}
+old_police_files  <- list.files(pattern = 'Police_Data_....\\.csv')
 
+old_police_tables <- lapply(old_police_files, read.csv, header = TRUE)
+
+old_police_data <- do.call(rbind , old_police_tables)
+
+#head(old_police_data)
+
+#dim(old_police_data)
 ```
 
 ### Police Incident Data: 2018 - Current
 
 ```{r}
+present_police_files  <- list.files(pattern = 'Present_Police_Data_....\\.csv')
 
+present_police_tables <- lapply(present_police_files, read.csv, header = TRUE)
+
+present_police_data <- do.call(rbind , present_police_tables)
+
+#head(present_police_data)
+
+#dim(present_police_data)
 ```
+
+### SF City Budget
+
+```{r}
+budget <- read_csv('Budget.csv')
+```
+
+
