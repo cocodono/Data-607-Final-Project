@@ -9,22 +9,31 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### Glaring Limitation: 
+
+There is no readily available data for before 2003, so I cannot make quantitative 
+statements from my own analysis of crime trends from before 2003 (I would love to
+based on reporting I have seen; however that would not be my own work).
+
 ### Necessary Packages
 
 ```{r}
 library(ggplot2)
 library(dplyr)
 library(readr)
+library(tidyverse)
 ```
 
-### Police Incident Data: 2003 - 2018
+### Police Incident Data: 2003 - 2017
 
 ```{r}
-old_police_files  <- list.files(pattern = 'Police_Data_....\\.csv')
+old_police_files  <- list.files(pattern = '^Police_Data_....\\.csv')
 
 old_police_tables <- lapply(old_police_files, read.csv, header = TRUE)
 
 old_police_data <- do.call(rbind , old_police_tables)
+
+head(old_police_data)
 
 #head(old_police_data)
 
@@ -40,7 +49,7 @@ present_police_tables <- lapply(present_police_files, read.csv, header = TRUE)
 
 present_police_data <- do.call(rbind , present_police_tables)
 
-#head(present_police_data)
+head(present_police_data)
 
 #dim(present_police_data)
 ```
@@ -48,7 +57,86 @@ present_police_data <- do.call(rbind , present_police_tables)
 ### SF City Budget
 
 ```{r}
-budget <- read_csv('Budget.csv')
+budget <- read.csv('Budget.csv')
 ```
 
+### SF Yearly Population
 
+```{r}
+sf_pop <- read.csv('SF_POP.csv')
+
+sf_pop$Population <- 1000 * sf_pop$Population
+
+sf_pop <- sf_pop %>%
+  separate(Year, c('year', 'month', 'date'), '-') %>%
+  select(year, Population)
+
+sf_pop$year <- as.integer(sf_pop$year)
+
+sf_pop <- sf_pop %>%
+  filter(year >= 2003)
+```
+
+### Joining New and Old Incident Counts, Reports, and the ratio of the two:
+
+```{r}
+old_police_data <- old_police_data %>%
+  separate(Date, c("month", "day","year"), "/")
+
+old_police_data$year <- as.integer(old_police_data$year)
+
+old_counts_and_incidents <- old_police_data %>%
+  group_by(year) %>%
+  summarize(count_reports = n(), count_incidents = length(unique(IncidntNum)))
+
+new_counts_and_incidents <- present_police_data %>%
+  rename('year' = 'Incident.Year') %>%
+  group_by(year) %>%
+  summarize(count_reports = n(), count_incidents = length(unique(Incident.Number)))
+
+counts_and_incidents <- rbind(new_counts_and_incidents, old_counts_and_incidents)
+
+counts_and_incidents <- counts_and_incidents %>%
+  group_by(year) %>%
+  mutate(ratio = count_reports/count_incidents) %>%
+  arrange(desc(year))
+
+counts_and_incidents
+# cool point: look at 2020...it had the lowest number of incidents in this entire time frame (cannot wait to compare this to population!!! i.e. the per 100,000)
+```
+
+### Visualizations: Incidents Over Time
+
+```{r}
+# I did not include 2023 just yet, because the year is only a about 1/3 of the 
+# way over and would not contribute to reliable comparisions for raw counts
+
+counts_and_incidents_no_2023 <- subset(counts_and_incidents, year != 2023)
+
+ggplot(counts_and_incidents_no_2023, aes(x= year, y= count_incidents)) +
+  geom_point() +
+  geom_line()
+```
+
+### Visualization: Ratio of reports vs acutal incidents
+
+```{r}
+ggplot(counts_and_incidents, aes(x= year, y= ratio)) +
+  geom_point() +
+  geom_line() +
+  labs(x = 'Year', y = 'Ratio of Reports Filed v.s. Actual Incidents', title = 'The Ratio of Reported Crimes to Actual Incidents Since 2003')
+```
+
+### Adding population to counts and incidents
+
+```{r}
+full_join(sf_pop, counts_and_incidents, by = 'year')
+```
+
+Ideas: 
+- Compare row count vs incident number count (maybe test for statistical 
+significance)
+- Check resolution rate over time (per year) and does that differ across crime types?
+-Crime per 100,000
+-Are there more crime heavy months over the years?
+- what do specific types of crime counts look like over time?
