@@ -2,18 +2,32 @@
 title: "Data 607 Final Project"
 author: "Coco Donovan"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Glaring Limitation: 
+### Introduction:
+
+I chose to have the focus of my analysis be police incident reports from the City 
+of San Francisco Police Department. My intention was to include analysis of crime 
+clearance statistics, and unfortunately that is not possible and I will get into 
+that dynamic a little during my presentation. Ultimately, I chose to conduct an 
+analysis over the years of crime and reports of crime.
+
+### Limitations: 
 
 There is no readily available data for before 2003, so I cannot make quantitative 
 statements from my own analysis of crime trends from before 2003 (I would love to
 based on reporting I have seen; however that would not be my own work).
+
+There are two different data sets; one from 2003-2018 and another from 2018-current.
+From this change in data sources has come a difference in values for the same 
+variables (this makes certain forms of analysis difficult to produce).
 
 ### Necessary Packages
 
@@ -32,12 +46,6 @@ old_police_files  <- list.files(pattern = '^Police_Data_....\\.csv')
 old_police_tables <- lapply(old_police_files, read.csv, header = TRUE)
 
 old_police_data <- do.call(rbind , old_police_tables)
-
-head(old_police_data)
-
-#head(old_police_data)
-
-#dim(old_police_data)
 ```
 
 ### Police Incident Data: 2018 - Current
@@ -48,10 +56,6 @@ present_police_files  <- list.files(pattern = 'Present_Police_Data_....\\.csv')
 present_police_tables <- lapply(present_police_files, read.csv, header = TRUE)
 
 present_police_data <- do.call(rbind , present_police_tables)
-
-head(present_police_data)
-
-#dim(present_police_data)
 ```
 
 ### SF City Budget
@@ -87,12 +91,12 @@ old_police_data$year <- as.integer(old_police_data$year)
 
 old_counts_and_incidents <- old_police_data %>%
   group_by(year) %>%
-  summarize(count_reports = n(), count_incidents = length(unique(IncidntNum)))
+  summarize(count_reports = as.double(n()), count_incidents = as.double(length(unique(IncidntNum))))
 
 new_counts_and_incidents <- present_police_data %>%
   rename('year' = 'Incident.Year') %>%
   group_by(year) %>%
-  summarize(count_reports = n(), count_incidents = length(unique(Incident.Number)))
+  summarize(count_reports = as.double(n()), count_incidents = as.double(length(unique(Incident.Number))))
 
 counts_and_incidents <- rbind(new_counts_and_incidents, old_counts_and_incidents)
 
@@ -101,7 +105,7 @@ counts_and_incidents <- counts_and_incidents %>%
   mutate(ratio = count_reports/count_incidents) %>%
   arrange(desc(year))
 
-counts_and_incidents
+knitr::kable(counts_and_incidents)
 # cool point: look at 2020...it had the lowest number of incidents in this entire time frame (cannot wait to compare this to population!!! i.e. the per 100,000)
 ```
 
@@ -115,7 +119,8 @@ counts_and_incidents_no_2023 <- subset(counts_and_incidents, year != 2023)
 
 ggplot(counts_and_incidents_no_2023, aes(x= year, y= count_incidents)) +
   geom_point() +
-  geom_line()
+  geom_line() +
+  labs(x = 'Year', y = 'Incidents per Year', title = 'Incidents per Year Since 2003')
 ```
 
 ### Visualization: Ratio of reports vs acutal incidents
@@ -130,13 +135,87 @@ ggplot(counts_and_incidents, aes(x= year, y= ratio)) +
 ### Adding population to counts and incidents
 
 ```{r}
-full_join(sf_pop, counts_and_incidents, by = 'year')
+years_and_counts <- full_join(sf_pop, counts_and_incidents, by = 'year')
 ```
 
-Ideas: 
-- Compare row count vs incident number count (maybe test for statistical 
-significance)
-- Check resolution rate over time (per year) and does that differ across crime types?
--Crime per 100,000
--Are there more crime heavy months over the years?
-- what do specific types of crime counts look like over time?
+### Crime per 100K
+
+```{r}
+years_and_counts <- years_and_counts %>%
+  mutate(incidents_per_100k = 100000 * count_incidents/Population) %>%
+  arrange(desc(year))
+
+knitr::kable(years_and_counts)
+```
+
+### Visualization: Crime Incidents per 100k
+
+```{r}
+ggplot(years_and_counts, aes(x= year, y= incidents_per_100k)) +
+  geom_point() +
+  geom_line() +
+  labs(x = 'Year', y = 'Incidents per Year per 100k Residents', title = 'Incidents per Year per 100k Residents Since 2003')
+```
+
+### Visualization: Ratio of Reports vs Incidents per 100K over time
+
+```{r}
+years_and_count_ratio_100k <-years_and_counts %>%
+  mutate(ratio_per_100k = count_reports / incidents_per_100k) %>%
+  arrange(desc(year))
+
+ggplot(years_and_count_ratio_100k, aes(x= year, y= ratio_per_100k)) +
+  geom_point() +
+  geom_line() +
+  labs(x = 'Year', y = 'Ratio of Reports Filed v.s. Actual Incidents per 100k residents', title = 'The Ratio of Reported Crimes to Actual Incidents Since 2003 per 100k residents')
+```
+
+### Arrest Rate Rate
+
+This is not possible for over time comparison and that has to do with how SF records 
+"Resolutions" to incidents. There is no easily accessible (I could not find any after
+scouring SFPD's website and SF City and County Documentation) documentation on what 
+each resolution type meant for the older data, and then the classifications were 
+changed with no explanation. Due to this lack of transparency, it is difficult to 
+track crime clearance rates over time. It does seem that this is data that does 
+exist internally and it is not open sourced.
+
+```{r}
+new_outcomes <- present_police_data %>%
+  group_by(Resolution) %>%
+  summarize(counts = n())
+
+unique(new_outcomes$Resolution)
+
+old_outcomes <- old_police_data %>%
+  group_by(Resolution) %>%
+  summarize(count = n())
+
+unique(tolower(old_outcomes$Resolution))
+```
+
+### Analysis of Homicide:
+
+```{r}
+head(old_police_data)
+```
+
+### Analysis of Theft:
+
+```{r}
+
+```
+
+### Conclusion:
+
+The trends that I observed were as follows:
+
+The incidents of crime have gone up yearly, over the timeframe, with the exception 
+of the pandemic. However, when we look at crime per 100K residents, crime has 
+gone down generally, with a large increase during the pandemic. 
+
+What is especially of note is that as crime per 100k residents, the reporting of
+crime increased. It is difficult to comment on exactly why that is because of 
+lack of clearance rates and the inconsistency with the "Resolution" variable in 
+both police incident report data sets.
+
