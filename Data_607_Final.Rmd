@@ -106,7 +106,6 @@ counts_and_incidents <- counts_and_incidents %>%
   arrange(desc(year))
 
 knitr::kable(counts_and_incidents)
-# cool point: look at 2020...it had the lowest number of incidents in this entire time frame (cannot wait to compare this to population!!! i.e. the per 100,000)
 ```
 
 ### Visualizations: Incidents Over Time
@@ -194,15 +193,10 @@ old_outcomes <- old_police_data %>%
 unique(tolower(old_outcomes$Resolution))
 ```
 
-### Analysis of Homicide:
+### Analysis of Crime Type:
 
 ```{r}
-head(old_police_data)
-```
 
-### Analysis of Theft:
-
-```{r}
 
 ```
 
