@@ -60,15 +60,6 @@ present_police_tables <- lapply(present_police_files, read.csv, header = TRUE)
 present_police_data <- do.call(rbind , present_police_tables)
 ```
 
-### SF City Budget
-
-A continuation of this analysis could use this file that comes from DataSF detailing
-the cities budget over the years, with a specific focus on funding of the Police.
-
-```{r}
-budget <- read.csv('Budget.csv')
-```
-
 ### SF Yearly Population
 
 ```{r}
@@ -146,7 +137,7 @@ years_and_counts <- full_join(sf_pop, counts_and_incidents, by = 'year')
 
 ```{r}
 years_and_counts <- years_and_counts %>%
-  mutate(incidents_per_100k = 100000 * count_incidents/Population) %>%
+  mutate(reports_per_100k = 100000 * count_reports/Population, incidents_per_100k = 100000 * count_incidents/Population) %>%
   arrange(desc(year))
 
 knitr::kable(years_and_counts)
@@ -159,19 +150,6 @@ ggplot(years_and_counts, aes(x= year, y= incidents_per_100k)) +
   geom_point() +
   geom_line() +
   labs(x = 'Year', y = 'Incidents per Year per 100k Residents', title = 'Incidents per Year per 100k Residents Since 2003')
-```
-
-### Visualization: Ratio of Reports vs Incidents per 100K over time
-
-```{r}
-years_and_count_ratio_100k <-years_and_counts %>%
-  mutate(ratio_per_100k = count_reports / incidents_per_100k) %>%
-  arrange(desc(year))
-
-ggplot(years_and_count_ratio_100k, aes(x= year, y= ratio_per_100k)) +
-  geom_point() +
-  geom_line() +
-  labs(x = 'Year', y = 'Ratio of Reports Filed v.s. Actual Incidents per 100k residents', title = 'The Ratio of Reported Crimes to Actual Incidents Since 2003 per 100k residents')
 ```
 
 ### Arrest Rate Rate
@@ -242,6 +220,10 @@ incident_codes$Incident.Code <- as.integer(incident_codes$Incident.Code)
 
 incident_codes$Incident.Category[incident_codes$Incident.Category == 'Drug Offense'] <- 'Drug Violation'
 
+# lumped the blank category in with miscellaneous
+
+incident_codes$Incident.Category[incident_codes$Incident.Category == ''] <- 'Other Miscellaneous'
+
 # The manual process of finding the missing categories:
 
 old_incident_codes <- old_police_data %>%
@@ -266,7 +248,7 @@ type_new <- present_police_data %>%
 
 total_type <- bind_rows(type_old, type_new)
 
-types <- left_join(total_type, incident_codes)
+incidents_with_types <- left_join(total_type, incident_codes)
 
 # -------------------------------
 # Checking the missing values:
@@ -282,6 +264,31 @@ missing_types <- types %>%
   summarize(n())
 # ------------------------------
 
+counts_and_reports_by_category <- incidents_with_types %>%
+  group_by(Incident.Year, Incident.Category) %>%
+  summarise(count_reports = as.double(n()), count_incidents = as.double(length(unique(Incident.Number)))) %>%
+  arrange(Incident.Year, desc(count_reports))
+
+counts_and_reports_by_category <- counts_and_reports_by_category %>%
+  rename(year = Incident.Year)
+
+year_pop_counts_categories <- full_join(sf_pop, counts_and_reports_by_category, by = 'year')
+
+counts_and_reports_by_category_per_100k <- year_pop_counts_categories %>%
+  group_by(year, Incident.Category) %>%
+  mutate(incidents_per_100k = 100000 * count_incidents/Population, reports_per_100k = 100000 * count_reports/Population) %>%
+  arrange(year, desc(count_reports))
+
+counts_and_reports_by_category_per_100k
+```
+
+### SF City Budget
+
+A continuation of this analysis could use this file that comes from DataSF detailing
+the cities budget over the years, with a specific focus on funding of the Police.
+
+```{r}
+budget <- read.csv('Budget.csv')
 ```
 
 ### Conclusion:
