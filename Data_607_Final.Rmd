@@ -32,6 +32,8 @@ variables (this makes certain forms of analysis difficult to produce).
 ### Necessary Packages
 
 ```{r}
+library(httr)
+library(jsonlite)
 library(ggplot2)
 library(dplyr)
 library(readr)
@@ -196,11 +198,34 @@ old_outcomes <- old_police_data %>%
 unique(tolower(old_outcomes$Resolution))
 ```
 
+### Incident Code Crosswalk:
+
+I am going to have to do some manual work to make a full cross walk because if
+just use the DataSF crosswalk that leaves me with about 6800 obersvations without 
+a crime category. Not to mention, the missing crime categories occur more often 
+in the earlier years which would slightly skew results in the direction of the 
+dangerous SF narrative.
+
+```{r}
+incident_codes <- jsonlite::fromJSON('https://data.sfgov.org/resource/ci9u-8awy.json?$limit=1012')
+
+incident_codes$inc_code <- as.integer(incident_codes$inc_code)
+
+incident_codes <- incident_codes %>%
+  rename(Incident.Code = inc_code, Category = category, Subcategory = subcategory)
+
+present_incident_codes <-  present_police_data %>%
+  select(Incident.Code, Incident.Category) %>%
+  unique()
+
+old_incident_codes <- old_police_data %>%
+  select(Incident.Code, Category) %>%
+  unique()
+```
+
 ### Analysis of Crime Type:
 
 ```{r}
-incident_codes <- read.csv()
-
 type_old <- old_police_data %>%
   select(year, IncidntNum, Incident.Code) %>%
   rename(Incident.Number = IncidntNum, Incident.Year = year)
@@ -211,6 +236,21 @@ type_new <- present_police_data %>%
 total_type <- bind_rows(type_old, type_new)
 
 types <- left_join(total_type, incident_codes)
+
+dist_missing_types <- types %>%
+  filter(is.na(Category)) %>%
+  group_by(Incident.Year)
+
+missing_types <- types %>%
+  filter(is.na(Incident.Category)) %>%
+  group_by(Incident.Code) %>%
+  summarize(n())
+
+# I am going to have to do some manual work to make a full cross walk because if
+# just use the DataSF crosswalk that leaves me with about 6800 obersvations without 
+# a crime category. Not to mention, the missing crime categories occur more often 
+# in the earlier years which would slightly skew results in the direction of the 
+# dangerous SF narrative.
 ```
 
 ### Conclusion:
