@@ -3,8 +3,8 @@ title: "Data 607 Final Project"
 author: "Coco Donovan"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -207,20 +207,51 @@ in the earlier years which would slightly skew results in the direction of the
 dangerous SF narrative.
 
 ```{r}
-incident_codes <- jsonlite::fromJSON('https://data.sfgov.org/resource/ci9u-8awy.json?$limit=1012')
+# This incident codes crosswalk comes from DataSF and using it leads to missing 
+# crime categories. Essentially, this crosswalk is not sufficient and needs to be 
+# improved and the process will unfortunately be largely manual.
 
-incident_codes$inc_code <- as.integer(incident_codes$inc_code)
+#incident_codes <- jsonlite::fromJSON('https://data.sfgov.org/resource/ci9u-8awy.json?$limit=1012')
 
-incident_codes <- incident_codes %>%
-  rename(Incident.Code = inc_code, Category = category, Subcategory = subcategory)
+#incident_codes$inc_code <- as.integer(incident_codes$inc_code)
 
-present_incident_codes <-  present_police_data %>%
+#incident_codes <- incident_codes %>%
+#  rename(Incident.Code = inc_code, Category = category, Subcategory = subcategory)
+
+incident_codes <- present_police_data %>%
   select(Incident.Code, Incident.Category) %>%
   unique()
+
+# I could continue this process, but this gets the number of observations missing
+# a category down to a little less the 800, which is significantly better than the 
+# 6793 observations missing a category when you use DataSF's proprietary crosswalk
+# and truthfully this is a bit of tedious process.
+
+row1 = c(Incident.Code = 11010, Incident.Category = 'Stolen Property')
+row2 = c(Incident.Code = 28090, Incident.Category = 'Vandalism')
+row3 = c(Incident.Code = 30090, Incident.Category = 'Other Miscellaneous')
+row4 = c(Incident.Code = 0, Incident.Category = 'Other Miscellaneous')
+row5 = c(Incident.Code = 6311, Incident.Category = 'Larceny Theft')
+row6 = c(Incident.Code = 16644, Incident.Category = 'Drug Violation')
+
+incident_codes <- rbind(incident_codes, row1, row2, row3, row4, row5, row6)
+
+incident_codes$Incident.Code <- as.integer(incident_codes$Incident.Code)
+
+# Combined Drug Offense and Drug Violation into one category
+
+incident_codes$Incident.Category[incident_codes$Incident.Category == 'Drug Offense'] <- 'Drug Violation'
+
+# The manual process of finding the missing categories:
 
 old_incident_codes <- old_police_data %>%
   select(Incident.Code, Category) %>%
   unique()
+
+is_it_in_old <- old_incident_codes %>%
+  filter(Incident.Code == 'insert integer value Incident.Code')
+
+categories <- unique(incident_codes$Incident.Category)
 ```
 
 ### Analysis of Crime Type:
@@ -237,20 +268,20 @@ total_type <- bind_rows(type_old, type_new)
 
 types <- left_join(total_type, incident_codes)
 
+# -------------------------------
+# Checking the missing values:
+
 dist_missing_types <- types %>%
-  filter(is.na(Category)) %>%
-  group_by(Incident.Year)
+  filter(is.na(Incident.Category)) %>%
+  #group_by(Incident.Year) %>%
+  summarise(n())
 
 missing_types <- types %>%
   filter(is.na(Incident.Category)) %>%
   group_by(Incident.Code) %>%
   summarize(n())
+# ------------------------------
 
-# I am going to have to do some manual work to make a full cross walk because if
-# just use the DataSF crosswalk that leaves me with about 6800 obersvations without 
-# a crime category. Not to mention, the missing crime categories occur more often 
-# in the earlier years which would slightly skew results in the direction of the 
-# dangerous SF narrative.
 ```
 
 ### Conclusion:
