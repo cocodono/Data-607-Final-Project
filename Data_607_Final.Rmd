@@ -60,6 +60,9 @@ present_police_data <- do.call(rbind , present_police_tables)
 
 ### SF City Budget
 
+A continuation of this analysis could use this file that comes from DataSF detailing
+the cities budget over the years, with a specific focus on funding of the Police.
+
 ```{r}
 budget <- read.csv('Budget.csv')
 ```
@@ -196,8 +199,18 @@ unique(tolower(old_outcomes$Resolution))
 ### Analysis of Crime Type:
 
 ```{r}
+incident_codes <- read.csv()
 
+type_old <- old_police_data %>%
+  select(year, IncidntNum, Incident.Code) %>%
+  rename(Incident.Number = IncidntNum, Incident.Year = year)
 
+type_new <- present_police_data %>%
+  select(Incident.Year, Incident.Number, Incident.Code)
+
+total_type <- bind_rows(type_old, type_new)
+
+types <- left_join(total_type, incident_codes)
 ```
 
 ### Conclusion:
@@ -212,4 +225,3 @@ What is especially of note is that as crime per 100k residents, the reporting of
 crime increased. It is difficult to comment on exactly why that is because of 
 lack of clearance rates and the inconsistency with the "Resolution" variable in 
 both police incident report data sets.
-
