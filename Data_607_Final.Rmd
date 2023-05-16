@@ -367,6 +367,18 @@ ggplot(counts_by_category_rape, aes(x= year, y= ratio)) +
   labs(x = 'Year', y = 'Ratio of Reports Filed v.s. Actual Incidents', title = 'The Ratio of Reported Crimes to Actual Incidents Since 2003')
 ```
 
+### Assault
+
+```{r}
+counts_by_category_assault <- counts_by_category %>%
+  filter(Incident.Category == 'Assault')
+
+ggplot(counts_by_category_assault, aes(x= year, y= count_incidents)) +
+  geom_point() +
+  geom_line() +
+  labs(x = 'Year', y = 'Assaults per Year', title = 'Assaults per Year Since 2003')
+```
+
 ### Homicide
 
 It is extremely hard to track homicide with DataSF and SFPD data. The data on
@@ -408,3 +420,8 @@ What is especially of note is that as crime per 100k residents, the reporting of
 crime increased. It is difficult to comment on exactly why that is because of 
 lack of clearance rates and the inconsistency with the "Resolution" variable in 
 both police incident report data sets.
+
+Another dynamic I noticed is that there was an general decrease in violent crime 
+incidents and a general increase in Violent Crimes. My opinion is that violence is 
+dangerous and non-violence is not dangerous. If Violent Crime is showing decrease
+then SF is likely becoming less dangerous.
